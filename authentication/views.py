@@ -1,7 +1,14 @@
 
 from django.contrib.auth.views import LoginView, LogoutView, PasswordChangeView
+from django.views.generic import View
 from django.urls import reverse_lazy
 from django.contrib import messages
+
+from django.conf import settings
+from django.contrib.auth import login
+from django.shortcuts import redirect, render
+
+from .forms import SignUpForm
 
 
 class MyLogin(LoginView):
@@ -28,3 +35,28 @@ class MyPasswordChangeView(PasswordChangeView):
     def form_valid(self, form):
         messages.success(self.request, 'Votre mot de passe a été modifié avec succés.')
         return super().form_valid(form)
+
+
+class SignUpPage(View):
+    form_class = SignUpForm
+    template_name = "authentication/signup.html"
+    success_url = settings.LOGIN_REDIRECT_URL
+
+    def get(self, request, *args, **kwargs):
+        return render(
+            request,
+            template_name=self.template_name,
+            context={"form":self.form_class}
+        )
+
+    def post(self, request, *args, **kwargs):
+        form = self.form_class(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            return redirect(self.success_url)
+        return render(
+            request,
+            template_name=self.template_name,
+            context={"form":form}
+        )
