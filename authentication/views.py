@@ -1,52 +1,30 @@
-from django.shortcuts import render, redirect
-from django.views.generic import View
-from django.contrib.auth import login, logout, authenticate
-from .forms import LoginForm
 
-# Create your views here.
-class LoginPageView(View):
+from django.contrib.auth.views import LoginView, LogoutView, PasswordChangeView
+from django.urls import reverse_lazy
+from django.contrib import messages
+
+
+class MyLogin(LoginView):
     template_name = 'authentication/login.html'
-    form_class = LoginForm
+    success_url = reverse_lazy('home')
 
-    def get(self, request):
-        form = self.form_class()
-        message = ''
-        return render(request, self.template_name, context={
-            'form': form,
-            'message': message
-        })
+    def form_valid(self, form):
+        messages.success(self.request, 'Vous êtes connecté avec succès.')
+        return super().form_valid(form)
 
-    def post(self, request):
-        form =  self.form_class(request.POST)
-        if form.is_valid():
-            user = authenticate(
-                username=form.cleaned_data['username'],
-                password=form.cleaned_data['password']
-            )
-            if user is not None:
-                login(request, user)
-                return redirect('home')
-        message = 'Indentifiants invalides.'
-        return render(request, self.template_name, context= {
-            'form': form,
-            'message': message
-        })
+    def form_invalid(self, form):
+        messages.error(self.request, 'La connexion a échoué. Veuillez vérifier vos identifiants.')
+        return super().form_invalid(form)
+class MyLogout(LogoutView):
+    next_page = reverse_lazy('authentication:login')
+    def dispatch(self, request, *args, **kwargs):
+        messages.success(request, "Vous avez été déconnecté avec succès.")
+        return super().dispatch(request, *args, **kwargs)
 
-def logout_user(request):
-    logout(request)
-    return redirect('login')
-def login_page(request):
-    form = LoginForm()
-    message =''
-    if request.method == 'POST':
-        form = LoginForm(request.POST)
-        if form.is_valid():
-            user = authenticate(
-                username=form.cleaned_data['username'],
-                password=form.cleaned_data['password'],
-            )
-            if user is not None:
-                login(request, user)
-                return redirect('home')
-        message = 'Identifiants invalides.'
-    return render(request, 'authentication/login.html', context={'form':form, 'message': message})
+class MyPasswordChangeView(PasswordChangeView):
+    template_name = 'authentication/password_change.html'
+    success_url = reverse_lazy('home')
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Votre mot de passe a été modifié avec succés.')
+        return super().form_valid(form)
